@@ -297,6 +297,7 @@ fi
 
 # Check download interval
 case "${download_interval}" in
+   3600) download_interval=3600;; # 1 hours
    21600) download_interval=21600;; # 6 hours
    43200) download_interval=43200;; # 12 hours
    86400) download_interval=86400;; # 24 hours
@@ -461,7 +462,6 @@ then
       log_debug "   | Configuration warnings acknowledged"
    else
       log_warning "Non-fatal configuration options detected. Continuing in 2 minutes..."
-      sleep 120
    fi
 fi
 

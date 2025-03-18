@@ -90,6 +90,7 @@ initialise_script()
    log_info " | File Match Policy: ${file_match_policy}"
    log_info " | Download interval: ${download_interval}"
    log_info " | Download delay (minutes): ${download_delay}"
+   log_info " | Full synchronisation interval: ${full_synchronisation_interval}"
    log_info " | Set EXIF date/time: ${set_exif_datetime}"
    log_info " | Auto delete: ${auto_delete}"
    log_info " | Delete after download: ${delete_after_download}"
@@ -97,6 +98,11 @@ initialise_script()
    then
       log_info " | Keep iCloud recent : Enabled"
       log_info " | Keep iCloud recent days: ${keep_icloud_recent_days}"
+   fi
+   if [ "${keep_icloud_album}" ]
+   then
+      log_info " | Keep iCloud album: Enabled"
+      log_info " | Keep iCloud album: ${keep_icloud_album}"
    fi
    log_info " | Delete empty directories: ${delete_empty_directories}"
    log_info " | Photo size: ${photo_size}"
@@ -861,7 +867,7 @@ downloaded_files_notification()
    if [ "${new_files_count:=0}" -gt 0 ]
    then
       log_info "New files downloaded: ${new_files_count}"
-      new_files_preview="$(echo "${new_files}" | cut --delimiter " " --fields 9- | sed -e "s%${download_path}/%%g" | head -10)"
+      new_files_preview="$(echo "${new_files}" | cut --delimiter " " --fields 9- | sed -e "s%${download_path}/%%g" -e 's%SharedSync-[^/]*%%g' | head -10)"
       new_files_preview_count="$(echo "${new_files_preview}" | wc -l)"
       if [ "${icloud_china}" = false ]
       then
@@ -973,6 +979,12 @@ download_albums()
 
 download_libraries()
 {
+   mode="$1"
+   command_line_new="${command_line}"
+   if [ "${recent_only}" ] && [ "${mode}" != "force_all" ]
+   then
+      command_line_new="${command_line_new} --recent ${recent_only}"
+   fi
    local all_libraries libraries_to_download
    if [ "${photo_library}" = "all libraries" ]
    then
@@ -1010,14 +1022,14 @@ download_libraries()
    IFS=","
    for library in ${libraries_to_download}
    do
-      log_info "Downloading library: ${library}"
+      log_info "Downloading library: ${library}, mode: ${mode}"
       if [ "${libraries_with_dates}" = true ]
       then
-         log_debug "iCloudPD launch command: /opt/icloudpd/bin/icloudpd ${command_line} --log-level ${log_level} --folder-structure ${library}/${folder_structure} --library ${library} 2>/tmp/icloudpd/icloudpd_download_error"
-         run_as "(/opt/icloudpd/bin/icloudpd ${command_line} --log-level "${log_level}" --folder-structure "${library}/${folder_structure}" --library "${library}" 2>/tmp/icloudpd/icloudpd_download_error; echo $? >/tmp/icloudpd/icloudpd_download_exit_code) | tee /tmp/icloudpd/icloudpd_sync.log"
+         log_debug "iCloudPD launch command: /opt/icloudpd/bin/icloudpd ${command_line_new} --log-level ${log_level} --folder-structure ${library}/${folder_structure} --library ${library} 2>/tmp/icloudpd/icloudpd_download_error"
+         run_as "(/opt/icloudpd/bin/icloudpd ${command_line_new} --log-level "${log_level}" --folder-structure "${library}/${folder_structure}" --library "${library}" 2>/tmp/icloudpd/icloudpd_download_error; echo $? >/tmp/icloudpd/icloudpd_download_exit_code) | tee /tmp/icloudpd/icloudpd_sync.log"
       else
-         log_debug "iCloudPD launch command: /opt/icloudpd/bin/icloudpd ${command_line} --log-level ${log_level} --folder-structure ${library} --library ${library} 2>/tmp/icloudpd/icloudpd_download_error"
-         run_as "(/opt/icloudpd/bin/icloudpd ${command_line} --log-level "${log_level}" --folder-structure "${library}" --library "${library}" 2>/tmp/icloudpd/icloudpd_download_error; echo $? >/tmp/icloudpd/icloudpd_download_exit_code) | tee /tmp/icloudpd/icloudpd_sync.log"
+         log_debug "iCloudPD launch command: /opt/icloudpd/bin/icloudpd ${command_line_new} --log-level ${log_level} --folder-structure ${library} --library ${library} 2>/tmp/icloudpd/icloudpd_download_error"
+         run_as "(/opt/icloudpd/bin/icloudpd ${command_line_new} --log-level "${log_level}" --folder-structure "${library}" --library "${library}" 2>/tmp/icloudpd/icloudpd_download_error; echo $? >/tmp/icloudpd/icloudpd_download_exit_code) | tee /tmp/icloudpd/icloudpd_sync.log"
       fi
       if [ "$(cat /tmp/icloudpd/icloudpd_download_exit_code)" -ne 0 ]
       then
@@ -1833,9 +1845,9 @@ send_notification()
    then
       if [ "${notification_files_preview_count}" ]
       then
-         telegram_text="$(echo -e "${notification_icon} *${notification_title}*\n${notification_message//_/\\_}\nMost recent ${notification_files_preview_count} ${notification_files_preview_type} files:\n${notification_files_preview_text//_/\\_}")"
+         telegram_text="$(echo -e "${notification_message//_/\\_}\nMost recent ${notification_files_preview_count} ${notification_files_preview_type} files:\n${notification_files_preview_text//_/\\_}")"
       else
-         telegram_text="$(echo -e "${notification_icon} *${notification_title}*\n${notification_message//_/\\_}")"
+         telegram_text="$(echo -e "${notification_message//_/\\_}")"
       fi
       notification_result="$(curl --silent --output /dev/null --write-out "%{http_code}" --request POST "${notification_url}" \
          --data chat_id="${telegram_chat_id}" \
@@ -2085,6 +2097,10 @@ command_line_builder()
    then
       command_line="${command_line} --keep-icloud-recent-days ${keep_icloud_recent_days}"
    fi
+   if [ "${keep_icloud_album}" ]
+   then
+      command_line="${command_line} --keep-icloud-album ${keep_icloud_album}"
+   fi
    if [ "${skip_live_photos}" = false ]
    then
       if [ "${live_photo_size}" != "original" ]
@@ -2106,15 +2122,16 @@ command_line_builder()
    then
       command_line="${command_line} --until-found ${until_found}"
    fi
-   if [ "${recent_only}" ]
-   then
-      command_line="${command_line} --recent ${recent_only}"
-   fi
+   # if [ "${recent_only}" ]
+   # then
+   #    command_line="${command_line} --recent ${recent_only}"
+   # fi
 }
 
 synchronise_user()
 {
    log_info "Sync user: ${user}"
+   local full_listen_counter=0
    if [ "${download_delay}" -ne 0 ]
    then
       log_info "Delay for ${download_delay} minutes"
@@ -2122,9 +2139,15 @@ synchronise_user()
    fi
    while true
    do
+      local force_all_sync="normal"
+      if [ "${full_synchronisation_interval}" ] && [ "${full_listen_counter}" -ge "${full_synchronisation_interval}" ]
+      then
+         force_all_sync="force_all"
+         full_listen_counter=0
+      fi
       download_start_time="$(date +'%s')"
       download_time="$(date +%s -d '+15 minutes')"
-      log_info "Download starting at $(date +%H:%M:%S -d "@${download_start_time}")"
+      log_info "Download starting at $(date +%H:%M:%S -d "@${download_start_time}"), full listen counter: ${full_listen_counter}"
       source <(grep debug_logging "${config_file}")
       chown -R "${user_id}:${group_id}" "/config"
       check_keyring_exists
@@ -2160,7 +2183,7 @@ synchronise_user()
             elif [ "${photo_library}" ]
             then
                log_debug "Starting Photo Library download"
-               download_libraries
+               download_libraries "${force_all_sync}"
             else
                log_debug "Starting Photo download"
                download_photos
@@ -2229,6 +2252,15 @@ synchronise_user()
                then
                   send_notification "remotesync" "iCloudPD remote download complete" "0" "iCloudPD has completed a remote download request for Apple ID: ${apple_id}"
                   unset remote_sync_complete_notification
+               fi
+               # Check and execute custom trigger script
+               if [ -f "/config/custom_trigger.sh" ]; then
+                  local new_files_count
+                  new_files_count="$(grep -c "Downloaded /" /tmp/icloudpd/icloudpd_sync.log)"
+                  log_info "Custom trigger script detected, executing with new files count: $new_files_count"
+                  chmod +x /config/custom_trigger.sh
+                  /config/custom_trigger.sh "${new_files_count}"
+                  log_info "Custom trigger script execution completed"
                fi
             fi
             login_counter=$((login_counter + 1))
@@ -2313,6 +2345,7 @@ synchronise_user()
                               mfa_code="$(echo "${check_update_text}" | awk '{print $2}')"
                               echo "${mfa_code}" > /tmp/icloudpd/expect_input.txt
                               listen_counter=$((listen_counter+2))
+                              full_listen_counter=$((full_listen_counter+2))
                               # additional sleeps mean sync time slips each time time a sync or auth is performed
                               # adding same amount of time to listen counter should prevent this from occurring
                               sleep 2
@@ -2323,6 +2356,7 @@ synchronise_user()
                               sms_choice="$(echo "${check_update_text}" | awk '{print $2}')"
                               echo "${sms_choice}" > /tmp/icloudpd/expect_input.txt
                               listen_counter=$((listen_counter+2))
+                              full_listen_counter=$((full_listen_counter+2))
                               # Same again
                               sleep 2
                               unset sms_choice
@@ -2350,6 +2384,7 @@ synchronise_user()
                   fi
                fi
                listen_counter=$((listen_counter+poll_sleep))
+               full_listen_counter=$((full_listen_counter+poll_sleep))
                # additional sleeps mean sync time slips each time time a sync or auth is performed
                # adding same amount of time to listen counter should prevent this from occurring
                sleep "${poll_sleep}"
@@ -2532,3 +2567,4 @@ check_mount
 command_line_builder
 check_keyring_exists
 synchronise_user
+

@@ -150,6 +150,10 @@ fi
    then
       echo keep_icloud_recent_days="${keep_icloud_recent_days}"
    fi
+   if [ "$(grep -c "^keep_icloud_album=" "${config_file}")" -eq 0 ]
+   then
+      echo keep_icloud_album="${keep_icloud_album}"
+   fi
    if [ "$(grep -c "^keep_icloud_recent_only=" "${config_file}")" -eq 0 ]
    then
       echo keep_icloud_recent_only="${keep_icloud_recent_only}"
@@ -301,6 +305,10 @@ fi
    if [ "$(grep -c "^download_interval=" "${config_file}")" -eq 0 ]
    then
       echo download_interval="${download_interval:=86400}"
+   fi
+   if [ "$(grep -c "^full_synchronisation_interval=" "${config_file}")" -eq 0 ]
+   then
+      echo full_synchronisation_interval="${full_synchronisation_interval:=86400}"
    fi
    if [ "$(grep -c "^synology_ignore_path=" "${config_file}")" -eq 0 ]
    then
@@ -639,6 +647,10 @@ if [ -z "$(grep "^download_interval=" "${config_file}" | awk -F= '{print $2}')" 
 then
    sed -i "s%^download_interval=$%download_interval=86400%" "${config_file}"
 fi
+if [ -z "$(grep "^full_synchronisation_interval=" "${config_file}" | awk -F= '{print $2}')" ]
+then
+   sed -i "s%^full_synchronisation_interval=$%full_synchronisation_interval=86400%" "${config_file}"
+fi
 if [ -z "$(grep "^synology_ignore_path=" "${config_file}" | awk -F= '{print $2}')" ]
 then
    sed -i "s%^synology_ignore_path=$%synology_ignore_path=false%" "${config_file}"
@@ -826,6 +838,10 @@ if [ "${keep_icloud_recent_days}" ]
 then
    sed -i "s%^keep_icloud_recent_days=.*%keep_icloud_recent_days=${keep_icloud_recent_days}%" "${config_file}"
 fi
+if [ "${keep_icloud_album}" ]
+then
+   sed -i "s%^keep_icloud_album=.*%keep_icloud_album=\"${keep_icloud_album}\"%" "${config_file}"
+fi
 if [ "${keep_icloud_recent_only}" ]
 then
    sed -i "s%^keep_icloud_recent_only=.*%keep_icloud_recent_only=${keep_icloud_recent_only}%" "${config_file}"
@@ -961,6 +977,10 @@ fi
 if [ "${download_interval}" ]
 then
    sed -i "s%^download_interval=.*%download_interval=${download_interval}%" "${config_file}"
+fi
+if [ "${full_synchronisation_interval}" ]
+then
+   sed -i "s%^full_synchronisation_interval=.*%full_synchronisation_interval=${full_synchronisation_interval}%" "${config_file}"
 fi
 if [ "${synology_ignore_path}" ]
 then
