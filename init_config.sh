@@ -143,6 +143,10 @@
    then
       echo keep_icloud_recent_days="${keep_icloud_recent_days}"
    fi
+   if [ "$(grep -c "^keep_icloud_album=" "${config_file}")" -eq 0 ]
+   then
+      echo keep_icloud_album="${keep_icloud_album}"
+   fi
    if [ "$(grep -c "^keep_icloud_recent_only=" "${config_file}")" -eq 0 ]
    then
       echo keep_icloud_recent_only="${keep_icloud_recent_only}"
@@ -802,6 +806,10 @@ fi
 if [ "${keep_icloud_recent_days}" ]
 then
    sed -i "s%^keep_icloud_recent_days=.*%keep_icloud_recent_days=${keep_icloud_recent_days}%" "${config_file}"
+fi
+if [ "${keep_icloud_album}" ]
+then
+   sed -i "s%^keep_icloud_album=.*%keep_icloud_album=\"${keep_icloud_album}\"%" "${config_file}"
 fi
 if [ "${keep_icloud_recent_only}" ]
 then

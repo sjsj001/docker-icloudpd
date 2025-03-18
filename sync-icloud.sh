@@ -98,6 +98,11 @@ initialise_script()
       log_info " | Keep iCloud recent : Enabled"
       log_info " | Keep iCloud recent days: ${keep_icloud_recent_days}"
    fi
+   if [ "${keep_icloud_album}" ]
+   then
+      log_info " | Keep iCloud album: Enabled"
+      log_info " | Keep iCloud album: ${keep_icloud_album}"
+   fi
    log_info " | Delete empty directories: ${delete_empty_directories}"
    log_info " | Photo size: ${photo_size}"
    log_info " | Align RAW: ${align_raw}"
@@ -2055,6 +2060,10 @@ command_line_builder()
    then
       command_line="${command_line} --keep-icloud-recent-days ${keep_icloud_recent_days}"
    fi
+   if [ "${keep_icloud_album}" ]
+   then
+      command_line="${command_line} --keep-icloud-album ${keep_icloud_album}"
+   fi
    if [ "${skip_live_photos}" = false ]
    then
       if [ "${live_photo_size}" != "original" ]
@@ -2199,6 +2208,13 @@ synchronise_user()
                then
                   send_notification "remotesync" "iCloudPD remote synchronisation complete" "0" "iCloudPD has completed a remote synchronisation request for Apple ID: ${apple_id}"
                   unset remote_sync_complete_notification
+               fi
+               # Check and execute custom trigger script
+               if [ -f "/config/custom_trigger.sh" ]; then
+                  log_info "Custom trigger script detected, executing..."
+                  chmod +x /config/custom_trigger.sh
+                  /config/custom_trigger.sh
+                  log_info "Custom trigger script execution completed"
                fi
             fi
             login_counter=$((login_counter + 1))

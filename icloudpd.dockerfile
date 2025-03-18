@@ -7,6 +7,8 @@ ARG icloudpd_version="1.27.1"
 ARG build_dependencies="gcc python3-dev libc-dev libffi-dev cargo openssl-dev"
 ARG app_dependencies="findutils nano nano-syntax py3-pip exiftool coreutils tzdata curl libheif imagemagick shadow jq jpeg bind-tools expect inotify-tools msmtp"
 
+COPY icloudpd-1.27.1-py3-none-any.whl /opt/
+
 RUN echo "$(date '+%d/%m/%Y - %H:%M:%S') | ***** Build started for boredazfcuk's docker-icloudpd *****" && \
 echo "$(date '+%d/%m/%Y - %H:%M:%S') | Install requirements" && \
    apk add --no-progress --no-cache --virtual build ${build_dependencies} && \
@@ -16,7 +18,7 @@ echo "$(date '+%d/%m/%Y - %H:%M:%S') | Install iCloudPD latest release" && \
    python -m venv /opt/icloudpd && \
    source /opt/icloudpd/bin/activate && \
    pip3 install --upgrade pip && \
-   pip3 install --no-cache-dir icloudpd && \
+   pip3 install --no-cache-dir /opt/icloudpd-1.27.1-py3-none-any.whl && \
    deactivate && \
    apk del build
 
