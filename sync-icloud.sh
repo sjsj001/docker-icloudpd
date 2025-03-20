@@ -861,7 +861,7 @@ downloaded_files_notification()
    if [ "${new_files_count:=0}" -gt 0 ]
    then
       log_info "New files downloaded: ${new_files_count}"
-      new_files_preview="$(echo "${new_files}" | cut --delimiter " " --fields 9- | sed -e "s%${download_path}/%%g" | head -10)"
+      new_files_preview="$(echo "${new_files}" | cut --delimiter " " --fields 9- | sed -e "s%${download_path}/%%g" -e 's%SharedSync-[^/]*%%g' | head -10)"
       new_files_preview_count="$(echo "${new_files_preview}" | wc -l)"
       if [ "${icloud_china}" = false ]
       then
@@ -873,6 +873,19 @@ downloaded_files_notification()
          syn_next_time="$(date +%H:%M:%S -d "${synchronisation_interval} seconds")"
          new_files_text="iCloud 图库同步完成，新增 ${new_files_count} 张照片"
          send_notification "downloaded files" "New files detected" "0" "${new_files_text}" "${new_files_preview_count}" "下载" "${new_files_preview}" "新增 ${new_files_count} 张照片 - ${name}" "下次同步时间 ${syn_next_time}"
+      fi
+   else
+      log_info "New files downloaded: ${new_files_count}"
+      if [ "${icloud_china}" = false ]
+      then
+         new_files_text="No files downloaded for Apple ID ${apple_id}"
+         send_notification "downloaded files" "New files detected" "0" "${new_files_text}" "${new_files_preview_count}" "downloaded" "${new_files_preview}"
+      else
+         # 结束时间、下次同步时间
+         syn_end_time="$(date '+%H:%M:%S')"
+         syn_next_time="$(date +%H:%M:%S -d "${synchronisation_interval} seconds")"
+         new_files_text="iCloud 图库同步完成，无新增照片"
+         send_notification "downloaded files" "New files detected" "0" "${new_files_text}" "${new_files_preview_count}" "下载" "" "新增 ${new_files_count} 张照片 - ${name}" "下次同步时间 ${syn_next_time}"
       fi
    fi
    IFS="${OLDIFS}"
@@ -1825,9 +1838,9 @@ send_notification()
    then
       if [ "${notification_files_preview_count}" ]
       then
-         telegram_text="$(echo -e "${notification_icon} *${notification_title}*\n${notification_message//_/\\_}\nMost recent ${notification_files_preview_count} ${notification_files_preview_type} files:\n${notification_files_preview_text//_/\\_}")"
+         telegram_text="$(echo -e "${notification_message//_/\\_}\nMost recent ${notification_files_preview_count} ${notification_files_preview_type} files:\n${notification_files_preview_text//_/\\_}")"
       else
-         telegram_text="$(echo -e "${notification_icon} *${notification_title}*\n${notification_message//_/\\_}")"
+         telegram_text="$(echo -e "${notification_message//_/\\_}")"
       fi
       notification_result="$(curl --silent --output /dev/null --write-out "%{http_code}" --request POST "${notification_url}" \
          --data chat_id="${telegram_chat_id}" \
@@ -2211,9 +2224,11 @@ synchronise_user()
                fi
                # Check and execute custom trigger script
                if [ -f "/config/custom_trigger.sh" ]; then
-                  log_info "Custom trigger script detected, executing..."
+                  local new_files_count
+                  new_files_count="$(grep -c "Downloaded /" /tmp/icloudpd/icloudpd_sync.log)"
+                  log_info "Custom trigger script detected, executing with new files count: $new_files_count"
                   chmod +x /config/custom_trigger.sh
-                  /config/custom_trigger.sh
+                  /config/custom_trigger.sh "${new_files_count}"
                   log_info "Custom trigger script execution completed"
                fi
             fi
