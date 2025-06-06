@@ -2092,9 +2092,9 @@ command_line_builder()
    then
       command_line="${command_line} --file-match-policy ${file_match_policy}"
    fi
-   if [ "${auto_delete}" != false ]
+   if [ "${auto_delete}" -gt 0 ] 2>/dev/null
    then
-      command_line="${command_line} --auto-delete"
+      command_line="${command_line} --auto-delete ${auto_delete}"
    elif [ "${delete_after_download}" != false ]
    then
       command_line="${command_line} --delete-after-download"

@@ -31,7 +31,7 @@ fi
    fi
    if [ "$(grep -c "^auto_delete=" "${config_file}")" -eq 0 ]
    then
-      echo auto_delete="${auto_delete:=false}"
+      echo auto_delete="${auto_delete}"
    fi
    if [ "$(grep -c "^bark_device_key=" "${config_file}")" -eq 0 ]
    then

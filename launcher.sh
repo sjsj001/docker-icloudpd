@@ -400,7 +400,7 @@ then
 fi
 
 # Halt on conflicting settings
-if [ "${auto_delete}" != false ] && [ "${delete_after_download}" != false ]
+if [ "$auto_delete" -gt 0 ] 2>/dev/null && [ "$delete_after_download" != false ]
 then
    log_error "   | The variables auto_delete and delete_after_download cannot both be configured at the same time. Please choose one or the other. Halting"
    sleep infinity
