@@ -705,7 +705,6 @@ elif [ "${current_version}" -lt "${latest_version}" ]
 then
    echo "Current version (v${current_version}) is out of date. Please upgrade to latest version (v${latest_version})."
    user_warning_displayed=true
-   sleep 1m
 elif [ "${current_version}" -gt "${latest_version}" ]
 then
    echo "Current version (v${current_version}) is newer than latest build (v${latest_version}). Good luck!"
